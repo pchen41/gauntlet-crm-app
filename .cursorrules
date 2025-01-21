@@ -1,0 +1,2 @@
+Use Shadcn UI, Radix, and Tailwind for components and styling. Make the design similar to the design of the Shadcn UI website.
+Use the functions in utils/supabase instead of the @supabase-auth-helpers-nextjs package.

@@ -1,0 +1,27 @@
+We want to build a CRM system similar to Zendesk. This system should have the following features:
+
+Tickets
+- Tickets should be created from a template and should have basic fields like title, description, status, priority, assignee, creation date by default.
+- Templates should allow for custom fields to be added.
+- Tickets should also have tags, internal notes and contain a full history of all changes.
+
+Users
+- Users should be split into two groups: Agents and Customers.
+
+Agents
+- Agents should have customizable views of tickets.
+- Ticket updates should appear in real time
+- Agents should be able to filter tickets by status and priority
+- Agents should be able to update tickets in bulk
+- Agents should have metrics tracked, including response time, resolution time and resolution rate
+
+Customers
+- Customers should view and update their tickets
+- There should be a searchable knowledge base with articles and FAQs
+- There should be an ai chatbot to answer questions
+- There should be email integration to allow ticket creation from emails
+- We potentially want to add additional channels for customer communication, such as phone and chat in the future
+- Customers should be able to give feedback and rate their support experience after ticket resolution
+
+
+
