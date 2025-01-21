@@ -39,13 +39,13 @@ export default function LandingPage() {
           <div className="flex justify-center gap-4">
             <Link href="/customer/login">
               <Button size="lg">
-                I'm a customer
+                I&apos;m a customer
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
             <Link href="/agent/login">
               <Button size="lg" variant="outline">
-                I'm an agent
+                I&apos;m an agent
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>

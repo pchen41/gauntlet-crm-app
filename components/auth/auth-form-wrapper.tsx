@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils"
 import { Bot } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import Link from 'next/link'
 
 interface AuthFormWrapperProps {
   children: React.ReactNode
@@ -19,12 +20,12 @@ export function AuthFormWrapper({
     <div className="flex min-h-screen w-full items-center justify-center bg-muted px-4">
       <div className="w-full max-w-[350px] space-y-6">
         <div className="flex flex-col items-center space-y-2 text-center">
-          <a href="/" className="flex items-center gap-2 font-medium">
+          <Link href="/" className="flex items-center gap-2 font-medium">
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <Bot className="h-4 w-4" />
             </div>
             autoCRM
-          </a>
+          </Link>
         </div>
         <Card className="w-full">
           <CardHeader className="space-y-1 text-center">

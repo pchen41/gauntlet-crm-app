@@ -78,7 +78,7 @@ export default function AgentLogin() {
           </Button>
         </form>
         <div className="text-center text-sm">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link 
             href="/agent/signup"
             className="font-medium text-primary hover:underline"
