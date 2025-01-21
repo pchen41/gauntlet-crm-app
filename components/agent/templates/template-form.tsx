@@ -27,6 +27,7 @@ interface TemplateField {
   rank: number
   isDefault: boolean
   visibleToCustomer: boolean
+  editableByCustomer: boolean
 }
 
 interface TemplateFormProps {
@@ -35,29 +36,43 @@ interface TemplateFormProps {
     name: string
     description: string | null
     fields: TemplateField[]
-  },
-  create: boolean,
+  }
+  create: boolean
   onSubmit: (data: {
     name: string
     description: string
-    fields: {
-      name: string
-      description?: string
-      type: string
-      required: boolean
-      rank: number
-      defaultValue?: string
-      choices?: string[]
-      isDefault: boolean
-      visibleToCustomer: boolean
-    }[]
+    fields: TemplateField[]
   }) => void
+  onFormChange?: (changed: boolean) => void
+  submitDisabled?: boolean
 }
 
-export function TemplateForm({ template, create, onSubmit }: TemplateFormProps) {
+export function TemplateForm({ 
+  template, 
+  create, 
+  onSubmit,
+  onFormChange,
+  submitDisabled 
+}: TemplateFormProps) {
   const [fields, setFields] = useState<TemplateField[]>(template.fields)
   const [name, setName] = useState(template?.name || "")
   const [description, setDescription] = useState(template?.description || "")
+
+  // Add function to check if form has changes
+  const checkForChanges = () => {
+    const hasNameChanged = name !== template.name
+    const hasDescriptionChanged = description !== template.description
+
+    const hasFieldsChanged = JSON.stringify(fields) !== JSON.stringify(template.fields)
+
+    const hasChanges = hasNameChanged || hasDescriptionChanged || hasFieldsChanged
+    onFormChange?.(hasChanges)
+  }
+
+  // Add effect to check for changes whenever form values update
+  useEffect(() => {
+    checkForChanges()
+  }, [name, description, fields])
 
   const addField = () => {
     const newField: TemplateField = {
@@ -67,7 +82,8 @@ export function TemplateForm({ template, create, onSubmit }: TemplateFormProps) 
       required: false,
       rank: fields.length,
       isDefault: false,
-      visibleToCustomer: true
+      visibleToCustomer: true,
+      editableByCustomer: false
     }
     setFields([...fields, newField])
   }
@@ -87,6 +103,11 @@ export function TemplateForm({ template, create, onSubmit }: TemplateFormProps) 
   }
 
   const renderFieldOptions = (field: TemplateField) => {
+    // Hide default value for customer and agent types
+    if (field.type === "customer" || field.type === "agent") {
+      return null
+    }
+
     switch (field.type) {
       case "select":
       case "multi-select":
@@ -96,14 +117,16 @@ export function TemplateForm({ template, create, onSubmit }: TemplateFormProps) 
               <Label className="mb-2.5 block">Default Value</Label>
               <Select
                 value={field.defaultValue || "none"}
-                onValueChange={(value) => updateField(field.id, { defaultValue: value === "none" ? "" : value })}
+                onValueChange={(value) => updateField(field.id, { 
+                  defaultValue: value === "none" ? undefined : value 
+                })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a default value" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No default</SelectItem>
-                  {field.choices?.map((choice, index) => (
+                  {field.choices?.filter(choice => choice.trim() !== '')?.map((choice, index) => (
                     <SelectItem key={index} value={choice}>
                       {choice}
                     </SelectItem>
@@ -151,7 +174,7 @@ export function TemplateForm({ template, create, onSubmit }: TemplateFormProps) 
                     className="h-9"
                     onClick={() =>
                       updateField(field.id, {
-                        choices: [...(field.choices || []), ""],
+                        choices: [...(field.choices || []), `Option ${(field.choices?.length || 0) + 1}`],
                       })
                     }
                   >
@@ -234,7 +257,7 @@ export function TemplateForm({ template, create, onSubmit }: TemplateFormProps) 
         {fields.map((field) => (
           <div
             key={field.id}
-            className="border rounded-lg p-4 space-y-4"
+            className="border rounded-lg p-4 space-y-6"
           >
             <div className="flex justify-between">
               <div className="flex-1 space-y-6 p-2">
@@ -296,7 +319,6 @@ export function TemplateForm({ template, create, onSubmit }: TemplateFormProps) 
                       onCheckedChange={(checked: boolean) =>
                         updateField(field.id, { required: checked })
                       }
-                      disabled={field.isDefault}
                     />
                     <Label 
                       htmlFor={`required-${field.id}`}
@@ -320,6 +342,22 @@ export function TemplateForm({ template, create, onSubmit }: TemplateFormProps) 
                       Visible to customer
                     </Label>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`editable-${field.id}`}
+                      checked={field.editableByCustomer}
+                      onCheckedChange={(checked: boolean) =>
+                        updateField(field.id, { editableByCustomer: checked })
+                      }
+                      disabled={!field.visibleToCustomer}
+                    />
+                    <Label 
+                      htmlFor={`editable-${field.id}`}
+                      className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Editable by customer
+                    </Label>
+                  </div>
                 </div>
               </div>
               {!field.isDefault && (
@@ -339,7 +377,7 @@ export function TemplateForm({ template, create, onSubmit }: TemplateFormProps) 
       </div>
 
       <div className="flex justify-end space-x-4">
-        <Button type="submit">
+        <Button type="submit" disabled={submitDisabled}>
           {create ? "Create Template" : "Update Template"}
         </Button>
       </div>

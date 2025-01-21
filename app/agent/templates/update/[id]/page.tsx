@@ -6,6 +6,53 @@ import { TemplateForm } from "@/components/agent/templates/template-form"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { createClient } from "@/utils/supabase/client"
+
+interface Template {
+  id: string
+  name: string
+  description: string | null
+  created_at: string
+  created_by: string
+  deleted_at: string | null
+  parent_id: string | null
+}
+
+interface TemplateField {
+  id: string
+  name: string
+  type: string
+  description: string | null
+  required: boolean
+  rank: number
+  default_value: string | null
+  choices: string[] | null
+  default: boolean
+  visible_to_customer: boolean
+  editable_by_customer: boolean
+  ticket_template_id: string
+}
+
+interface FormTemplateField {
+  id: string
+  name: string
+  type: string
+  description?: string
+  required: boolean
+  rank: number
+  defaultValue?: string
+  choices?: string[]
+  isDefault: boolean
+  visibleToCustomer: boolean
+  editableByCustomer: boolean
+}
+
+interface FormTemplate {
+  id: string
+  name: string
+  description: string | null
+  fields: FormTemplateField[]
+}
 
 interface PageProps {
   params: Promise<{
@@ -15,86 +62,130 @@ interface PageProps {
 
 export default function UpdateTemplatePage({ params }: PageProps) {
   const router = useRouter()
-  const [template, setTemplate] = useState<any>(null)
+  const supabase = createClient()
+  const [template, setTemplate] = useState<Template | null>(null)
+  const [fields, setFields] = useState<TemplateField[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const resolvedParams = use(params)
+  const [hasChanges, setHasChanges] = useState(false)
 
   useEffect(() => {
     const fetchTemplate = async () => {
       try {
-        // Mock data with fields
-        setTemplate({
-          id: resolvedParams.id,
-          name: "Mock Template",
-          description: "This is a mock template for testing",
-          fields: [
-            {
-              id: "1",
-              name: "Customer Name",
-              type: "text",
-              description: "Full name of the customer",
-              required: true,
-              rank: 0,
-              isDefault: true,
-              visibleToCustomer: true
-            },
-            {
-              id: "2",
-              name: "Priority",
-              type: "select",
-              description: "Ticket priority level",
-              required: true,
-              rank: 1,
-              isDefault: true,
-              visibleToCustomer: true,
-              choices: ["Low", "Medium", "High", "Urgent"],
-              defaultValue: "Medium"
-            },
-            {
-              id: "3",
-              name: "Due Date",
-              type: "date",
-              description: "When this needs to be completed",
-              required: false,
-              rank: 2,
-              isDefault: false,
-              visibleToCustomer: true
-            }
-          ]
-        })
+        // Fetch template
+        const { data: templateData, error: templateError } = await supabase
+          .from('ticket_templates')
+          .select('*')
+          .eq('id', resolvedParams.id)
+          .single()
+
+        if (templateError) throw templateError
+        if (!templateData) throw new Error('Template not found')
+
+        // Fetch template fields
+        const { data: fieldsData, error: fieldsError } = await supabase
+          .from('template_fields')
+          .select('*')
+          .eq('ticket_template_id', resolvedParams.id)
+          .order('rank', { ascending: true })
+
+        if (fieldsError) throw fieldsError
+
+        setTemplate(templateData)
+        setFields(fieldsData)
       } catch (error) {
         console.error("Failed to fetch template:", error)
+        setError(error instanceof Error ? error.message : 'Failed to fetch template')
       } finally {
         setLoading(false)
       }
     }
 
     fetchTemplate()
-  }, [resolvedParams.id])
+  }, [resolvedParams.id, supabase])
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (formData: any) => {
     try {
-      // TODO: Implement API call to update template
-      console.log("Updating template:", data)
-      
-      // Redirect back to templates list
+      const { data: newTemplate, error: templateError } = await supabase
+        .rpc('create_ticket_template', {
+          p_name: formData.name,
+          p_description: formData.description,
+          p_fields: formData.fields.map((field: any) => ({
+            name: field.name,
+            type: field.type,
+            description: field.description,
+            required: field.required,
+            default_value: field.defaultValue,
+            choices: field.choices,
+            isDefault: field.isDefault,
+            visible_to_customer: field.visibleToCustomer,
+            editable_by_customer: field.editableByCustomer
+          })),
+          p_parent_id: template?.parent_id || template?.id
+        })
+
+      if (templateError) throw templateError
       router.push("/agent/templates")
     } catch (error) {
       console.error("Failed to update template:", error)
-      // TODO: Add error handling
+      setError(error instanceof Error ? error.message : 'Failed to update template')
     }
   }
 
+  const handleFormChange = (changed: boolean) => {
+    setHasChanges(changed)
+  }
+
   if (loading) {
-    return <div>Loading...</div> // TODO: Add proper loading state
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-10">
+        <div className="bg-destructive/15 text-destructive p-4 rounded-lg">
+          {error}
+        </div>
+      </div>
+    )
   }
 
   if (!template) {
-    return <div>Template not found</div> // TODO: Add proper error state
+    return (
+      <div className="container mx-auto py-10">
+        <div className="bg-destructive/15 text-destructive p-4 rounded-lg">
+          Template not found
+        </div>
+      </div>
+    )
+  }
+
+  const formattedTemplate: FormTemplate = {
+    id: template.id,
+    name: template.name,
+    description: template.description,
+    fields: fields.map(field => ({
+      id: field.id,
+      name: field.name,
+      type: field.type,
+      description: field.description || undefined,
+      required: field.required,
+      rank: field.rank,
+      defaultValue: field.default_value || undefined,
+      choices: field.choices || undefined,
+      isDefault: field.default,
+      visibleToCustomer: field.visible_to_customer,
+      editableByCustomer: field.editable_by_customer,
+    }))
   }
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-10 pt-8">
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-6">
           <Link href="/agent/templates">
@@ -106,7 +197,13 @@ export default function UpdateTemplatePage({ params }: PageProps) {
         </div>
       </div>
       <div className="border rounded-lg p-6 bg-card">
-        <TemplateForm template={template} create={false} onSubmit={handleSubmit} />
+        <TemplateForm 
+          template={formattedTemplate} 
+          create={false} 
+          onSubmit={handleSubmit}
+          onFormChange={handleFormChange}
+          submitDisabled={!hasChanges}
+        />
       </div>
     </div>
   )

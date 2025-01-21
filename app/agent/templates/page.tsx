@@ -34,6 +34,7 @@ export default function TemplatesPage() {
         const { data, error } = await supabase
           .from("ticket_templates")
           .select("*")
+          .is("deleted_at", null)
           .order("created_at", { ascending: false })
 
         if (error) {
@@ -50,10 +51,10 @@ export default function TemplatesPage() {
     }
 
     fetchTemplates()
-  }, [])
+  })
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-10 pt-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Ticket Templates</h1>
         <Button onClick={() => router.push("/agent/templates/new")}>
@@ -87,7 +88,11 @@ export default function TemplatesPage() {
               </TableRow>
             ) : (
               templates.map((template) => (
-                <TableRow key={template.id}>
+                <TableRow 
+                  key={template.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => router.push(`/agent/templates/${template.id}`)}
+                >
                   <TableCell className="font-medium">{template.name}</TableCell>
                   <TableCell>{template.description}</TableCell>
                   <TableCell>
@@ -97,11 +102,12 @@ export default function TemplatesPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() =>
+                      onClick={(e) => {
+                        e.stopPropagation();
                         router.push(`/agent/templates/update/${template.id}`)
-                      }
+                      }}
                     >
-                      <Pencil className="!h-3 !w-3" />
+                      <Pencil className="h-3 w-3" />
                       Edit
                     </Button>
                   </TableCell>

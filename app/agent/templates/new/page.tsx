@@ -21,6 +21,7 @@ type TemplateFormData = {
     choices?: string[]
     isDefault: boolean
     visibleToCustomer: boolean
+    editableByCustomer: boolean
   }[]
 }
 
@@ -33,7 +34,8 @@ const DEFAULT_FIELDS = [
     required: true,
     rank: 0,
     isDefault: true,
-    visibleToCustomer: true
+    visibleToCustomer: false,
+    editableByCustomer: false
   },
   {
     id: "status",
@@ -45,7 +47,8 @@ const DEFAULT_FIELDS = [
     defaultValue: "New",
     rank: 1,
     isDefault: true,
-    visibleToCustomer: true
+    visibleToCustomer: true,
+    editableByCustomer: false
   },
   {
     id: "priority",
@@ -56,7 +59,8 @@ const DEFAULT_FIELDS = [
     choices: ["0", "1", "2", "3"],
     rank: 2,
     isDefault: true,
-    visibleToCustomer: true
+    visibleToCustomer: false,
+    editableByCustomer: false
   },
 ]
 
@@ -75,7 +79,8 @@ export default function NewTemplatePage() {
         default_value: field.defaultValue,
         choices: field.choices,
         isDefault: field.isDefault,
-        visible_to_customer: field.visibleToCustomer
+        visible_to_customer: field.visibleToCustomer,
+        editable_by_customer: field.editableByCustomer
       }))
 
       const { data: templateId, error } = await supabase
@@ -103,7 +108,7 @@ export default function NewTemplatePage() {
   }
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-10 pt-8">
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-6">
           <Link href="/agent/templates">

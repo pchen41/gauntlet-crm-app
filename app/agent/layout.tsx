@@ -12,9 +12,9 @@ export default function AgentLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="fixed inset-0">
       <Header />
-      <main className="flex-1 pt-16">
+      <main className="absolute top-16 bottom-0 left-0 right-0 overflow-auto">
         {children}
       </main>
     </div>
