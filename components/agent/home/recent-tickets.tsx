@@ -1,26 +1,19 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { formatDistanceToNow } from "date-fns"
+import Link from "next/link"
 
-export function RecentTickets() {
-  // This would normally fetch from your database
-  const tickets = [
-    {
-      id: "1",
-      title: "Cannot access account",
-      status: "open",
-      priority: "high",
-      created: new Date(2024, 2, 15),
-    },
-    {
-      id: "2",
-      title: "Payment failed",
-      status: "in-progress",
-      priority: "medium",
-      created: new Date(2024, 2, 14),
-    },
-  ]
+type RecentTicketsProps = {
+  tickets: {
+    id: string;
+    title: string;
+    status: string;
+    priority: string;
+    created_at: string;
+  }[];
+};
 
+export function RecentTickets({ tickets }: RecentTicketsProps) {
   return (
     <Table>
       <TableHeader>
@@ -33,24 +26,46 @@ export function RecentTickets() {
       </TableHeader>
       <TableBody>
         {tickets.map((ticket) => (
-          <TableRow key={ticket.id}>
-            <TableCell className="font-medium">{ticket.title}</TableCell>
-            <TableCell>
-              <Badge variant={ticket.status === "open" ? "default" : "secondary"}>
-                {ticket.status}
-              </Badge>
+          <TableRow key={ticket.id} className="hover:bg-muted/50 cursor-pointer group">
+            <TableCell className="font-medium">
+              <Link 
+                href={`/agent/tickets/${ticket.id}`}
+                className="block"
+              >
+                {ticket.title}
+              </Link>
             </TableCell>
             <TableCell>
-              <Badge variant={ticket.priority === "high" ? "destructive" : "default"}>
-                {ticket.priority}
-              </Badge>
+              <Link 
+                href={`/agent/tickets/${ticket.id}`}
+                className="block"
+              >
+                <Badge variant="outline">
+                  {ticket.status}
+                </Badge>
+              </Link>
+            </TableCell>
+            <TableCell>
+              <Link 
+                href={`/agent/tickets/${ticket.id}`}
+                className="block"
+              >
+                <Badge variant="outline">
+                  {ticket.priority}
+                </Badge>
+              </Link>
             </TableCell>
             <TableCell className="text-muted-foreground">
-              {formatDistanceToNow(ticket.created, { addSuffix: true })}
+              <Link 
+                href={`/agent/tickets/${ticket.id}`}
+                className="block"
+              >
+                {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
+              </Link>
             </TableCell>
           </TableRow>
         ))}
       </TableBody>
     </Table>
-  )
+  );
 } 

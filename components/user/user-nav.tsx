@@ -29,6 +29,7 @@ export function UserNav() {
   const [user, setUser] = useState<{
     name: string | null
     email: string | null
+    roles: string[] | null
   } | null>(null)
 
   useEffect(() => {
@@ -38,13 +39,14 @@ export function UserNav() {
       if (sessionUser) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('name, email')
+          .select('name, email, roles')
           .eq('id', sessionUser.id)
           .single()
 
         setUser({
           name: profile?.name || 'User',
           email: profile?.email || null,
+          roles: profile?.roles || null,
         })
       }
     }
@@ -83,10 +85,6 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </DropdownMenuItem>
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
               <Palette className="mr-2 h-4 w-4" />
