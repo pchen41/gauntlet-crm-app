@@ -201,6 +201,7 @@ export default function TemplatePage({ params }: PageProps) {
                 <TableHead>Type</TableHead>
                 <TableHead>Required</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead>Choices</TableHead>
                 <TableHead>Customer Access</TableHead>
               </TableRow>
             </TableHeader>
@@ -211,6 +212,22 @@ export default function TemplatePage({ params }: PageProps) {
                   <TableCell>{field.type}</TableCell>
                   <TableCell>{field.required ? "Yes" : "No"}</TableCell>
                   <TableCell>{field.description || "-"}</TableCell>
+                  <TableCell>
+                    {field.type === 'select' ? (
+                      field.choices?.length ? (
+                        <div className="flex flex-wrap gap-1">
+                          {field.choices.map((choice, index) => (
+                            <span
+                              key={index}
+                              className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium ring-1 ring-inset ring-muted"
+                            >
+                              {choice}
+                            </span>
+                          ))}
+                        </div>
+                      ) : "-"
+                    ) : "-"}
+                  </TableCell>
                   <TableCell>
                     {field.visible_to_customer
                       ? field.editable_by_customer

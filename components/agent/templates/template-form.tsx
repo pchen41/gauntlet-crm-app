@@ -289,8 +289,8 @@ export function TemplateForm({
                         <SelectItem value="number">Number</SelectItem>
                         <SelectItem value="select">Select</SelectItem>
                         {/*<SelectItem value="multi-select">Multi-select</SelectItem>*/}
-                        <SelectItem value="date">Date</SelectItem>
-                        <SelectItem value="customer">Customer</SelectItem>
+                        {/*<SelectItem value="date">Date</SelectItem>*/}
+                        {/*<SelectItem value="customer">Customer</SelectItem>*/}
                         <SelectItem value="agent">Agent</SelectItem>
                       </SelectContent>
                     </Select>

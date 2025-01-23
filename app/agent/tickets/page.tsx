@@ -8,52 +8,53 @@ import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
-interface Profile {
-  name: string | null
-}
-
-interface TicketTemplate {
-  name: string | null
-}
-
 interface Ticket {
   id: string
   title: string
   created_at: string
-  fields?: {
+  created_by: string | null
+  fields: {
     status?: string
     priority?: string
   }
-  profiles?: {
-    tickets_assigned_to?: Profile
-    tickets_created_by?: Profile
-  }
-  ticket_templates?: TicketTemplate
+  assigned_to: {
+    name: string | null
+    email: string | null
+  }[]
+  creator: {
+    name: string | null
+    email: string | null
+  }[]
+  ticket_templates: {
+    name: string | null
+  }[]
 }
 
 export default async function TicketsPage() {
   const supabase = await createClient()
 
-  const { data: tickets } = await supabase
+  const { data: tickets, error } = await supabase
     .from('tickets')
     .select(`
       id,
       title,
       created_at,
-      assigned_to,
       created_by,
       fields,
-      profiles(name),
-      ticket_templates(name)
+      assigned_to:profiles!tickets_assigned_to_fkey (name, email),
+      creator:profiles!tickets_created_by_fkey (name, email),
+      ticket_templates (name)
     `)
     .order('created_at', { ascending: false })
 
-  const formattedTickets = (tickets || []).map((ticket: any) => ({
+  const formattedTickets = (tickets || []).map((ticket: Ticket) => ({
     id: ticket.id,
     title: ticket.title,
-    assignedTo: ticket.assigned_to || 'Unassigned',
+    // @ts-expect-error
+    assignedTo: ticket.assigned_to?.name || 'Unassigned',
     status: ticket.fields?.status || 'New',
     priority: ticket.fields?.priority || 'Normal',
+    // @ts-expect-error
     template: ticket.ticket_templates?.name,
     createdBy: ticket.created_by,
     createdAt: new Date(ticket.created_at).toLocaleString(),

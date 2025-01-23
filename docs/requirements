@@ -1,7 +1,7 @@
 We want to build a CRM system similar to Zendesk. This system should have the following features:
 
 Tickets
-- Tickets should be created from a template and should have basic fields like title, description, status, priority, assignee, creation date by default.
+- Tickets should be created from a template and should have basic fields like title, description, status, priority, assigned to, creation date by default.
 - Templates should allow for custom fields to be added.
 - Tickets should also have tags, internal notes and contain a full history of all changes.
 

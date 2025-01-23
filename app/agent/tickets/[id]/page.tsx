@@ -2,10 +2,12 @@ import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { ArrowLeft, Clock } from 'lucide-react'
+import { ArrowLeft, Clock, User, HelpCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { TicketFields } from '@/components/agent/tickets/view/TicketFields'
+import { TicketHistory } from '@/components/agent/tickets/view/TicketHistory'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,13 +25,15 @@ export default async function TicketPage({
   params: { id: string }
 }) {
   const supabase = await createClient()
+  const ticketId = (await params).id
 
-  const { data: ticket } = await supabase
+  const { data: ticket, error } = await supabase
     .from('tickets')
     .select(`
       *,
-      profiles(name),
-      ticket_templates!inner(
+      creator:profiles!created_by(name, email),
+      assigned_to:profiles!assigned_to(name, email),
+      ticket_templates(
         id,
         name,
         template_fields(
@@ -40,10 +44,22 @@ export default async function TicketPage({
           choices,
           rank
         )
+      ),
+      ticket_updates(
+        id,
+        comment,
+        updates,
+        internal,
+        created_at,
+        created_by(name, email)
       )
     `)
-    .eq('id', params.id)
+    .eq('id', ticketId)
     .single()
+
+  if (error) {
+    console.error('Error fetching ticket:', error)
+  }
 
   if (!ticket) {
     notFound()
@@ -62,66 +78,47 @@ export default async function TicketPage({
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold">{ticket.title}</h1>
+          <h1 className="text-3xl font-bold">View Ticket</h1>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-            <Clock className="h-4 w-4" />
-            <span>Created {new Date(ticket.created_at).toLocaleString()}</span>
-          </div>
-
-          {ticket.description && (
-            <>
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
-                <div className="text-sm whitespace-pre-wrap">{ticket.description}</div>
-              </div>
-              <Separator className="my-6" />
-            </>
-          )}
-
-          <div className="grid gap-y-6">
-            {templateFields.map((field: TemplateField) => (
-              <div key={field.id}>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="text-sm font-medium mb-1.5">{field.name}</div>
-                    {field.description && (
-                      <div className="text-xs text-muted-foreground">
-                        {field.description}
-                      </div>
-                    )}
+      <div className="grid grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="col-span-2">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold">{ticket.title}</CardTitle>
+                <CardDescription>
+                  Reported by {ticket.creator?.name} ({ticket.creator?.email}) on {new Date(ticket.created_at).toLocaleString()}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>              
+                {ticket.description && (
+                  <div className="text-foreground whitespace-pre-wrap">
+                    {ticket.description}
                   </div>
-                  <div className="mt-0.5">
-                    {field.type === 'select' && field.choices ? (
-                      <Badge variant={
-                        field.name.toLowerCase() === 'status' ? (
-                          ticket.fields?.[field.id] === "Closed" ? "secondary" :
-                          ticket.fields?.[field.id] === "In Progress" ? "default" :
-                          "outline"
-                        ) : field.name.toLowerCase() === 'priority' ? (
-                          ticket.fields?.[field.id] === "High" ? "destructive" :
-                          ticket.fields?.[field.id] === "Medium" ? "default" :
-                          "outline"
-                        ) : "outline"
-                      }>
-                        {ticket.fields?.[field.id] || 'Not set'}
-                      </Badge>
-                    ) : (
-                      <span className="text-sm">
-                        {ticket.fields?.[field.id] || 'Not set'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+                )}
+              </CardContent>
+            </Card>
+            <TicketHistory 
+              ticketId={ticket.id}
+              updates={ticket.ticket_updates}
+              templateFields={templateFields}
+            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          <TicketFields 
+            ticketId={ticket.id}
+            templateFields={templateFields}
+            fields={ticket.fields || {}}
+            tags={ticket.tags || []}
+          />
+        </div>
+      </div>
     </div>
   )
 }
