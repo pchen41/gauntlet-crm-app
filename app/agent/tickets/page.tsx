@@ -1,10 +1,11 @@
 import { Suspense } from 'react'
 import { createClient } from '@/utils/supabase/server'
 import { DataTable } from '../../../components/agent/tickets/data-table'
-import { columns } from '../../../components/agent/tickets/columns'
+import { columns, FormattedTicket } from '../../../components/agent/tickets/columns'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,14 +13,13 @@ interface Ticket {
   id: string
   title: string
   created_at: string
-  created_by: string | null
+  updated_at: string
+  tags: string[]
   fields: {
-    status?: string
-    priority?: string
-  }
-  assigned_to: {
-    name: string | null
-    email: string | null
+    id: string
+    name: string
+    value: string
+    type: string
   }[]
   creator: {
     name: string | null
@@ -33,33 +33,78 @@ interface Ticket {
 export default async function TicketsPage() {
   const supabase = await createClient()
 
+  // Add this to get the current user
+  const { data: { user: sessionUser } } = await supabase.auth.getUser()
+  const { data: currentUser } = await supabase
+    .from('profiles')
+    .select('id, name, email')
+    .eq('id', sessionUser?.id)
+    .single()
+
+  if (!currentUser) {
+    redirect('/agent/login')
+  }
+
   const { data: tickets, error } = await supabase
     .from('tickets')
     .select(`
       id,
       title,
       created_at,
-      created_by,
+      updated_at,
+      tags,
       fields,
-      assigned_to:profiles!tickets_assigned_to_fkey (name, email),
       creator:profiles!tickets_created_by_fkey (name, email),
       ticket_templates (name)
     `)
     .order('created_at', { ascending: false })
 
-  const formattedTickets = (tickets || []).map((ticket: Ticket) => ({
-    id: ticket.id,
-    title: ticket.title,
-    // @ts-expect-error
-    assignedTo: ticket.assigned_to?.name || 'Unassigned',
-    status: ticket.fields?.status || 'New',
-    priority: ticket.fields?.priority || 'Normal',
-    // @ts-expect-error
-    template: ticket.ticket_templates?.name,
-    createdBy: ticket.created_by,
-    createdAt: new Date(ticket.created_at).toLocaleString(),
-    href: `/agent/tickets/${ticket.id}`,
-  }))
+  // Get unique assigned agent IDs
+  const assignedAgentIds = [...new Set((tickets || [])
+    .map((ticket: Ticket) => {
+      const field = ticket.fields?.find((f: any) => f.name === 'Assigned To')
+      return field?.value
+    })
+    .filter(id => id && id !== 'Unknown'))]
+
+  // Fetch only the needed profiles
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, name, email')
+    .in('id', assignedAgentIds)
+
+  const formattedTickets: FormattedTicket[] = (tickets || []).map((ticket: Ticket) => {
+    // Helper function to find field value by name
+    const getFieldValue = (fieldName: string) => {
+      if (!Array.isArray(ticket.fields)) return 'Unknown'
+      const field = ticket.fields.find((f: any) => f.name === fieldName)
+      return field?.value || 'Unknown'
+    }
+
+    const assignedToId = getFieldValue('Assigned To')
+    const assignedToProfile = assignedToId !== 'Unknown' 
+      ? (profiles || []).find(p => p.id === assignedToId)
+      : null
+
+    return {
+      id: ticket.id,
+      title: ticket.title,
+      assignedTo: assignedToProfile?.name || 'Unassigned',
+      assignedToEmail: assignedToProfile?.email || null,
+      status: getFieldValue('Status'),
+      priority: getFieldValue('Priority'),
+      // @ts-expect-error
+      template: ticket.ticket_templates?.name,
+      // @ts-expect-error
+      createdBy: ticket.creator?.name,
+      // @ts-expect-error
+      creatorEmail: ticket.creator?.email,
+      createdAt: ticket.created_at,
+      updatedAt: ticket.updated_at,
+      tags: ticket.tags || [],
+      href: `/agent/tickets/${ticket.id}`,
+    }
+  })
 
   return (
     <div className="container mx-auto py-10 pt-8">
@@ -74,7 +119,15 @@ export default async function TicketsPage() {
       </div>
 
       <Suspense fallback={<div>Loading tickets...</div>}>
-        <DataTable columns={columns} data={formattedTickets || []} />
+        <DataTable 
+          columns={columns} 
+          data={formattedTickets || []} 
+          currentUser={{
+            id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email
+          }}
+        />
       </Suspense>
     </div>
   )

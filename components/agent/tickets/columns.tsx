@@ -9,98 +9,206 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import Link from "next/link"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { formatDistanceToNow } from "date-fns"
 
-export type Ticket = {
+export type FormattedTicket = {
   id: string
   title: string
   assignedTo: string
   status: string
   priority: string
-  template: string | null | undefined
-  createdBy: string | null | undefined
+  template: string
+  createdBy: string
+  creatorEmail: string
   createdAt: string
+  updatedAt: string
+  tags: string[]
   href: string
+  assignedToEmail: string | null
 }
 
-export const columns: ColumnDef<Ticket>[] = [
+export const columns: ColumnDef<FormattedTicket>[] = [
   {
     accessorKey: "title",
     header: "Title",
     cell: ({ row }) => {
-      return (
-        <div className="cursor-pointer" onClick={() => window.location.href = row.original.href}>
-          {row.original.title}
-        </div>
-      )
-    }
+      return <Link href={row.original.href} className="hover:underline">{row.getValue("title")}</Link>
+    },
   },
   {
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
-      const status = row.getValue("status") as string
-      return (
-        <Badge variant={
-          status === "Closed" ? "secondary" :
-          status === "In Progress" ? "default" :
-          "outline"
-        }>
-          {status}
-        </Badge>
-      )
+      return <Badge variant="outline">{row.getValue("status")}</Badge>
     },
   },
   {
     accessorKey: "priority",
-    header: "Priority",
-    cell: ({ row }) => {
-      const priority = row.getValue("priority") as string
+    header: ({ column }) => {
       return (
-        <Badge variant={
-          priority === "High" ? "destructive" :
-          priority === "Medium" ? "default" :
-          "outline"
-        }>
-          {priority}
-        </Badge>
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="flex items-center gap-1 p-0 hover:bg-transparent"
+        >
+          Priority
+          {column.getIsSorted() === "asc" ? (
+            <ArrowUp className="h-4 w-4" />
+          ) : column.getIsSorted() === "desc" ? (
+            <ArrowDown className="h-4 w-4" />
+          ) : (
+            <ArrowUpDown className="h-4 w-4" />
+          )}
+        </Button>
       )
     },
   },
   {
     accessorKey: "assignedTo",
     header: "Assigned To",
+    enableHiding: true,
+    cell: ({ row }) => {
+      const assignedToEmail = row.original.assignedToEmail
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>{row.getValue("assignedTo") || 'Unassigned'}</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{assignedToEmail || 'No email available'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )
+    },
   },
   {
     accessorKey: "template",
     header: "Template",
+    enableHiding: true,
   },
   {
-    accessorKey: "createdAt",
-    header: "Created At",
-  },
-  {
-    id: "actions",
+    accessorKey: "createdBy",
+    header: "Created By",
+    enableHiding: true,
     cell: ({ row }) => {
-      const ticket = row.original
-
+      const creatorEmail = row.original.creatorEmail
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild>
-              <Link href={`/agent/tickets/${ticket.id}`}>
-                View ticket
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>{row.getValue("createdBy")}</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{creatorEmail || 'No email available'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )
     },
   },
+  {
+    accessorKey: "createdAt",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="flex items-center gap-1 p-0 hover:bg-transparent"
+        >
+          Created At
+          {column.getIsSorted() === "asc" ? (
+            <ArrowUp className="h-4 w-4" />
+          ) : column.getIsSorted() === "desc" ? (
+            <ArrowDown className="h-4 w-4" />
+          ) : (
+            <ArrowUpDown className="h-4 w-4" />
+          )}
+        </Button>
+      )
+    },
+    cell: ({ row }) => {
+      const date = new Date(row.original.createdAt)
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>{formatDistanceToNow(date, { addSuffix: true })}</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{date.toLocaleString()}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )
+    },
+  },
+  {
+    accessorKey: "updatedAt",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="flex items-center gap-1 p-0 hover:bg-transparent"
+        >
+          Updated At
+          {column.getIsSorted() === "asc" ? (
+            <ArrowUp className="h-4 w-4" />
+          ) : column.getIsSorted() === "desc" ? (
+            <ArrowDown className="h-4 w-4" />
+          ) : (
+            <ArrowUpDown className="h-4 w-4" />
+          )}
+        </Button>
+      )
+    },
+    cell: ({ row }) => {
+      const date = new Date(row.original.updatedAt)
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>{formatDistanceToNow(date, { addSuffix: true })}</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{date.toLocaleString()}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )
+    },
+  },
+  {
+    accessorKey: "tags",
+    header: "Tags",
+    enableHiding: true,
+    filterFn: (row, id, value) => {
+      const tags = row.getValue(id) as string[]
+      return tags.some(tag => 
+        tag.toLowerCase().includes((value as string).toLowerCase())
+      )
+    },
+    cell: ({ row }) => {
+      const tags = row.getValue("tags") as string[]
+      return (
+        <div className="flex gap-1">
+          {tags.map((tag) => (
+            <Badge key={tag} variant="secondary">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      )
+    },
+  }
 ] 

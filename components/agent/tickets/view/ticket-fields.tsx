@@ -2,23 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AgentSelect } from './AgentSelect'
+import { AgentSelect } from './agent-select'
 import { createClient } from "@/utils/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
-
-interface TemplateField {
-  id: string
-  name: string
-  type: string
-  description?: string
-  choices?: string[]
-}
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Agent {
   id: string
@@ -26,55 +17,66 @@ interface Agent {
   email: string
 }
 
+interface TicketField {
+  id: string
+  name: string
+  value: string
+  type: 'text' | 'number' | 'select' | 'agent'
+  choices?: string[]
+}
+
 interface TicketFieldsProps {
   ticketId: string
-  templateFields: TemplateField[]
-  fields: Record<string, string>
+  fields: TicketField[]
   tags: string[]
 }
 
-export function TicketFields({ ticketId, templateFields, fields, tags }: TicketFieldsProps) {
+export function TicketFields({ ticketId, fields, tags }: TicketFieldsProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
-  const [fieldValues, setFieldValues] = useState(fields)
-  const [originalValues, setOriginalValues] = useState(fields)
+  const [fieldValues, setFieldValues] = useState<TicketField[]>(fields)
+  const [originalValues, setOriginalValues] = useState<TicketField[]>(fields)
   const [agentDetails, setAgentDetails] = useState<Record<string, Agent>>({})
   const [tagValues, setTagValues] = useState<string[]>(tags)
 
-  // Fetch agent details for all agent-type fields
+  // Fetch agent details for all agent values
   useEffect(() => {
     const fetchAgentDetails = async () => {
-      const agentFields = templateFields
-        .filter(field => field.type === 'agent' && fieldValues[field.id])
-        .map(field => fieldValues[field.id])
+      const agentIds = fieldValues
+        .filter(field => field.value && field.type === 'agent')
+        .map(field => field.value)
       
-      if (agentFields.length === 0) return
+      if (agentIds.length === 0) return
 
       const supabase = createClient()
       const { data } = await supabase
         .from('profiles')
         .select('id, name, email')
-        .in('id', agentFields)
+        .in('id', agentIds)
 
       if (data) {
         const details: Record<string, Agent> = {}
         data.forEach(agent => {
-          details[agent.id] = agent
+          // Strip quotes if they exist
+          const id = agent.id.replace(/^"|"$/g, '')
+          details[id] = agent
         })
         setAgentDetails(details)
       }
     }
 
     fetchAgentDetails()
-  }, [templateFields, fieldValues])
+  }, [fieldValues])
 
-  const hasChanges = Object.entries(fieldValues).some(
-    ([key, value]) => value !== originalValues[key]
-  ) || !arrayEquals(tagValues, tags)
+  const hasChanges = !isEqual(fieldValues, originalValues) || !arrayEquals(tagValues, tags)
 
-  const handleFieldChange = (fieldId: string, value: string) => {
-    setFieldValues(prev => ({ ...prev, [fieldId]: value }))
+  const handleFieldChange = (fieldName: string, value: string) => {
+    setFieldValues(prev => 
+      prev.map(field => 
+        field.name === fieldName ? { ...field, value } : field
+      )
+    )
   }
 
   const handleCancel = () => {
@@ -89,7 +91,10 @@ export function TicketFields({ ticketId, templateFields, fields, tags }: TicketF
       
       const params: any = {
         ticket_id: ticketId,
-        field_updates: fieldValues,
+        field_updates: fieldValues.map(field => ({
+          id: field.id,
+          value: field.value
+        })),
         updater_id: (await supabase.auth.getUser()).data.user?.id,
         internal: true
       }
@@ -123,33 +128,65 @@ export function TicketFields({ ticketId, templateFields, fields, tags }: TicketF
     }
   }
 
+  const renderFieldInput = (field: TicketField) => {
+    switch (field.type) {
+      case 'number':
+        return (
+          <Input
+            type="number"
+            value={field.value}
+            onChange={(e) => handleFieldChange(field.name, e.target.value)}
+            className="text-sm"
+          />
+        )
+      case 'select':
+        return (
+          <Select
+            value={field.value}
+            onValueChange={(value) => handleFieldChange(field.name, value)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select..." />
+            </SelectTrigger>
+            <SelectContent>
+              {field.choices?.map((choice) => (
+                <SelectItem key={choice} value={choice}>
+                  {choice}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )
+      case 'agent':
+        return (
+          <AgentSelect
+            value={field.value}
+            onChange={(value) => handleFieldChange(field.name, value)}
+          />
+        )
+      case 'text':
+      default:
+        return (
+          <Input
+            type="text"
+            value={field.value}
+            onChange={(e) => handleFieldChange(field.name, e.target.value)}
+            className="text-sm"
+          />
+        )
+    }
+  }
+
   return (
     <Card className="group">
       <CardContent className="pt-6">
         <div className="space-y-4">
-          {templateFields.map((field, index) => (
+          {fieldValues.map((field, index) => (
             <div key={field.id}>
               <div className="mb-1">
                 <div className="flex items-center justify-between gap-1.5">
-                  <div className="flex items-center gap-1.5">
-                    {field.description ? (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger className="text-left">
-                            <div className="text-sm font-medium text-muted-foreground">
-                              {field.name}
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">{field.description}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ) : (
-                      <div className="text-sm font-medium text-muted-foreground">
-                        {field.name}
-                      </div>
-                    )}
+                  <div className="text-sm font-medium text-muted-foreground">
+                    {field.name}
                   </div>
                   {index === 0 && !isEditing && (
                     <Button
@@ -164,41 +201,14 @@ export function TicketFields({ ticketId, templateFields, fields, tags }: TicketF
               </div>
               <div>
                 {isEditing ? (
-                  field.type === 'select' && field.choices ? (
-                    <Select
-                      value={fieldValues[field.id] || ''}
-                      onValueChange={(value) => handleFieldChange(field.id, value)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {field.choices.map((choice) => (
-                          <SelectItem key={choice} value={choice}>
-                            {choice}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : field.type === 'agent' ? (
-                    <AgentSelect
-                      value={fieldValues[field.id] || ''}
-                      onChange={(value) => handleFieldChange(field.id, value)}
-                    />
-                  ) : (
-                    <Input
-                      value={fieldValues[field.id] || ''}
-                      onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                      className="text-sm"
-                    />
-                  )
+                  renderFieldInput(field)
                 ) : (
                   field.type === 'agent' ? (
                     <div className="text-sm">
-                      {fieldValues[field.id] ? (
-                        agentDetails[fieldValues[field.id]] ? (
+                      {field.value ? (
+                        agentDetails[field.value] ? (
                           <span>
-                            {agentDetails[fieldValues[field.id]].name} ({agentDetails[fieldValues[field.id]].email})
+                            {agentDetails[field.value].name} ({agentDetails[field.value].email})
                           </span>
                         ) : (
                           'Loading...'
@@ -207,13 +217,9 @@ export function TicketFields({ ticketId, templateFields, fields, tags }: TicketF
                         <span className="text-muted-foreground">Not assigned</span>
                       )}
                     </div>
-                  ) : field.type === 'select' && field.choices ? (
-                    <Badge variant="outline">
-                      {fieldValues[field.id] || 'Not set'}
-                    </Badge>
                   ) : (
                     <div className="text-sm">
-                      {fieldValues[field.id] || 'Not set'}
+                      {field.value || 'Not set'}
                     </div>
                   )
                 )}
@@ -274,4 +280,12 @@ export function TicketFields({ ticketId, templateFields, fields, tags }: TicketF
 // Helper function to compare arrays
 function arrayEquals(a: string[], b: string[]) {
   return a.length === b.length && a.every((val, index) => val === b[index]);
+}
+
+// Add lodash isEqual for deep comparison of arrays
+function isEqual(arr1: TicketField[], arr2: TicketField[]): boolean {
+  if (arr1.length !== arr2.length) return false
+  return arr1.every((field, index) => 
+    field.name === arr2[index].name && field.value === arr2[index].value
+  )
 } 

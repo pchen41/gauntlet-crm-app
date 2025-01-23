@@ -93,7 +93,7 @@ export default function TemplatesPage() {
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => router.push(`/agent/templates/${template.id}`)}
                 >
-                  <TableCell className="font-medium">{template.name}</TableCell>
+                  <TableCell>{template.name}</TableCell>
                   <TableCell>{template.description}</TableCell>
                   <TableCell>
                     {new Date(template.created_at).toLocaleDateString()}

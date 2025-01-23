@@ -5,6 +5,10 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
+interface TemplateField {
+  rank: number
+}
+
 export default async function NewTicketPage() {
   const supabase = await createClient()
 
@@ -19,11 +23,17 @@ export default async function NewTicketPage() {
         required,
         choices,
         default_value,
-        visible_to_customer
+        visible_to_customer,
+        rank
       )
     `)
     .is('deleted_at', null)
     .order('name')
+
+  // Sort template fields by rank
+  templates?.forEach(template => {
+    template.template_fields.sort((a: TemplateField, b: TemplateField) => a.rank - b.rank)
+  })
 
   const { data: agents } = await supabase
     .from('profiles')
@@ -42,28 +52,31 @@ export default async function NewTicketPage() {
     const templateId = formData.get('template_id') as string
     const title = formData.get('title') as string
     const description = formData.get('description') as string
-    const assignedTo = formData.get('assigned_to') as string
 
     const { data: template } = await supabase
       .from('ticket_templates')
-      .select('template_fields(*)')
+      .select('template_fields(id, name, type, rank)')
       .eq('id', templateId)
       .single()
 
-    const fields: Record<string, any> = {}
-    template?.template_fields?.forEach((field) => {
-      const value = formData.get(`field_${field.id}`)
-      if (value) {
-        fields[field.id] = value
-      }
-    })
+    // Convert form data to array of fields with id, name, value, and type
+    const fields = template?.template_fields
+      ?.sort((a, b) => a.rank - b.rank)
+      .map((field) => {
+        const value = formData.get(`field_${field.id}`)
+        return {
+          id: field.id,
+          name: field.name,
+          value: value ? String(value) : '',
+          type: field.type
+        }
+      }) || []
 
     const { error } = await supabase
       .from('tickets')
       .insert({
         title,
         description,
-        assigned_to: assignedTo,
         ticket_template_id: templateId,
         fields,
       })

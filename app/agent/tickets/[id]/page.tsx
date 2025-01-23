@@ -6,18 +6,10 @@ import { ArrowLeft, Clock, User, HelpCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { TicketFields } from '@/components/agent/tickets/view/TicketFields'
-import { TicketHistory } from '@/components/agent/tickets/view/TicketHistory'
+import { TicketFields } from '@/components/agent/tickets/view/ticket-fields'
+import { TicketHistory } from '@/components/agent/tickets/view/ticket-history'
 
 export const dynamic = 'force-dynamic'
-
-interface TemplateField {
-  id: string
-  name: string
-  type: string
-  description?: string
-  choices?: string[]
-}
 
 export default async function TicketPage({
   params,
@@ -32,7 +24,6 @@ export default async function TicketPage({
     .select(`
       *,
       creator:profiles!created_by(name, email),
-      assigned_to:profiles!assigned_to(name, email),
       ticket_templates(
         id,
         name,
@@ -40,9 +31,7 @@ export default async function TicketPage({
           id,
           name,
           type,
-          description,
-          choices,
-          rank
+          choices
         )
       ),
       ticket_updates(
@@ -65,9 +54,16 @@ export default async function TicketPage({
     notFound()
   }
 
-  const templateFields = ticket.ticket_templates.template_fields.sort(
-    (a: any, b: any) => a.rank - b.rank
-  )
+  // Merge template field choices with ticket fields
+  const fieldsWithChoices = ticket.fields.map((field: any) => {
+    const templateField = ticket.ticket_templates.template_fields.find(
+      (tf: any) => tf.id === field.id
+    )
+    return {
+      ...field,
+      choices: templateField?.choices
+    }
+  })
 
   return (
     <div className="container mx-auto py-10 pt-8">
@@ -104,7 +100,6 @@ export default async function TicketPage({
             <TicketHistory 
               ticketId={ticket.id}
               updates={ticket.ticket_updates}
-              templateFields={templateFields}
             />
           </div>
         </div>
@@ -113,8 +108,7 @@ export default async function TicketPage({
         <div className="space-y-6">
           <TicketFields 
             ticketId={ticket.id}
-            templateFields={templateFields}
-            fields={ticket.fields || {}}
+            fields={fieldsWithChoices}
             tags={ticket.tags || []}
           />
         </div>

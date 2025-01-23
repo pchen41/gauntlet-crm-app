@@ -15,12 +15,15 @@ import { Separator } from "@/components/ui/separator"
 import DOMPurify from 'isomorphic-dompurify'
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns'
 
 interface TicketUpdate {
   id: string
   comment: string | null
   updates: {
+    id?: string
     field: string
+    type?: string    // Add type field
     old_value: string
     new_value: string
   }[] | null
@@ -41,11 +44,6 @@ interface Agent {
 interface TicketHistoryProps {
   ticketId: string
   updates: TicketUpdate[]
-  templateFields: Array<{
-    id: string
-    name: string
-    type: string
-  }>
 }
 
 function isEditorEmpty(content: string) {
@@ -54,7 +52,20 @@ function isEditorEmpty(content: string) {
   return !strippedContent
 }
 
-export function TicketHistory({ ticketId, updates, templateFields }: TicketHistoryProps) {
+const formatDate = (date: Date) => {
+  if (isToday(date)) {
+    return `today at ${format(date, 'h:mm a')}`
+  }
+  if (isYesterday(date)) {
+    return `yesterday at ${format(date, 'h:mm a')}`
+  }
+  if (new Date().getFullYear() === date.getFullYear()) {
+    return format(date, 'MMM d \'at\' h:mm a')
+  }
+  return format(date, 'MMM d, yyyy \'at\' h:mm a')
+}
+
+export function TicketHistory({ ticketId, updates }: TicketHistoryProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [publicComment, setPublicComment] = useState("")
@@ -71,10 +82,13 @@ export function TicketHistory({ ticketId, updates, templateFields }: TicketHisto
       updates.forEach(update => {
         if (update.updates) {
           update.updates.forEach(change => {
-            const field = templateFields.find(f => f.id === change.field)
-            if (field?.type === 'agent') {
-              if (change.old_value && change.old_value !== '""') agentIds.add(change.old_value)
-              if (change.new_value && change.new_value !== '""') agentIds.add(change.new_value)
+            if (change.type === 'agent') {
+              if (change.old_value && change.old_value !== '""') {
+                agentIds.add(change.old_value.replace(/^"|"$/g, ''))
+              }
+              if (change.new_value && change.new_value !== '""') {
+                agentIds.add(change.new_value.replace(/^"|"$/g, ''))
+              }
             }
           })
         }
@@ -90,14 +104,15 @@ export function TicketHistory({ ticketId, updates, templateFields }: TicketHisto
       if (data) {
         const details: Record<string, Agent> = {}
         data.forEach(agent => {
-          details[`"${agent.id}"`] = agent
+          const id = agent.id.replace(/^"|"$/g, '')
+          details[id] = agent
         })
         setAgentDetails(details)
       }
     }
 
     fetchAgentDetails()
-  }, [updates, templateFields])
+  }, [updates])
 
   const handleSubmit = async (comment: string, isInternal: boolean) => {
     if (!comment.trim()) return
@@ -108,7 +123,7 @@ export function TicketHistory({ ticketId, updates, templateFields }: TicketHisto
       
       const { error } = await supabase.rpc('update_ticket', {
         ticket_id: ticketId,
-        field_updates: {},
+        field_updates: [],
         updater_id: (await supabase.auth.getUser()).data.user?.id,
         comment: comment,
         internal: isInternal
@@ -140,45 +155,43 @@ export function TicketHistory({ ticketId, updates, templateFields }: TicketHisto
     }
   }
 
+  const formatValue = (value: string, isAgentField: boolean) => {
+    if (!isAgentField) return value || 'Not set'
+    
+    if (!value || value === '""') return 'Not assigned'
+    
+    const agentId = value.replace(/^"|"$/g, '')
+    const agent = agentDetails[agentId]
+    return agent ? `${agent.name} (${agent.email})` : value
+  }
+
   const formatUpdate = (update: TicketUpdate) => {
     return (
-      <div className="space-y-1">
+      <div className="space-y-4">
         {update.comment && (
-          <div 
-            className="!text-base prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(update.comment)
-            }}
-          />
+          <div className="bg-muted rounded-lg p-4">
+            <div 
+              className="!text-base prose prose-sm max-w-none dark:prose-invert"
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(update.comment)
+              }}
+            />
+          </div>
         )}
         {update.updates && (
-          <div className="space-y-1">
+          <div className="space-y-1 text-sm">
             {update.updates.map((change, index) => {
-              const field = templateFields.find(f => f.id === change.field)
-              const fieldName = field?.name || change.field
-
-              if (field?.type === 'agent') {
-                const oldAgent = change.old_value ? agentDetails[change.old_value] : null
-                const newAgent = change.new_value ? agentDetails[change.new_value] : null
-                
-                const oldValue = oldAgent ? `${oldAgent.name} (${oldAgent.email})` : 'Not assigned'
-                const newValue = newAgent ? `${newAgent.name} (${newAgent.email})` : 'Not assigned'
-
-                return (
-                  <div key={index} className="text-muted-foreground">
-                    Changed <Badge variant="outline">{fieldName}</Badge> from{' '}
-                    <span className="text-primary">{oldValue}</span> to <span className="text-primary">{newValue}</span>
-                  </div>
-                )
-              }
-
-              const oldValue = change.old_value || 'Not set'
-              const newValue = change.new_value
+              const isAgentField = change.type === 'agent'
 
               return (
                 <div key={index} className="text-muted-foreground">
-                  Changed <Badge variant="outline">{fieldName}</Badge> from{' '}
-                  <span className="text-primary">{oldValue}</span> to <span className="text-primary">{newValue}</span>
+                  Changed <Badge variant="outline">{change.field}</Badge> from{' '}
+                  <span className="text-primary">
+                    {formatValue(change.old_value, isAgentField)}
+                  </span> to{' '}
+                  <span className="text-primary">
+                    {formatValue(change.new_value, isAgentField)}
+                  </span>
                 </div>
               )
             })}
@@ -223,7 +236,7 @@ export function TicketHistory({ ticketId, updates, templateFields }: TicketHisto
                   .map(update => (
                     <div key={update.id} className="space-y-1">
                       <div className="text-sm text-muted-foreground">
-                        {update.created_by.name} ({update.created_by.email}) on {new Date(update.created_at).toLocaleString()}
+                        {update.created_by.name} ({update.created_by.email}) {formatDate(new Date(update.created_at))}
                       </div>
                       <div className="whitespace-pre-wrap text-sm">
                         {formatUpdate(update)}
@@ -271,7 +284,7 @@ export function TicketHistory({ ticketId, updates, templateFields }: TicketHisto
                   .map(update => (
                     <div key={update.id} className="space-y-1">
                       <div className="text-sm text-muted-foreground">
-                        {update.created_by.name} ({update.created_by.email}) on {new Date(update.created_at).toLocaleString()}
+                        {update.created_by.name} ({update.created_by.email}) {formatDate(new Date(update.created_at))}
                       </div>
                       <div className="whitespace-pre-wrap text-sm">
                         {formatUpdate(update)}
