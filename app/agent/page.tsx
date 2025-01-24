@@ -1,17 +1,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { PlusCircle, Inbox, Clock, Star, Filter, CheckCircle2, Ticket } from "lucide-react"
+import { Inbox, Clock, CheckCircle2, Ticket } from "lucide-react"
 import { RecentTickets } from "../../components/agent/home/recent-tickets"
-import { AgentMetrics } from "../../components/agent/home/agent-metrics"
-import { SavedViews } from "../../components/agent/home/saved-views"
 import { getAgentMetrics } from "@/lib/actions/agent-metrics"
 
 export default async function AgentDashboard() {
   const metrics = await getAgentMetrics();
 
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-start justify-between">
+    <div className="container mx-auto py-10 pt-8 space-y-6">
+      <div className="flex items-start justify-between pb-2">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">Welcome back! Here&apos;s an overview of your support queue.</p>
@@ -79,7 +77,7 @@ export default async function AgentDashboard() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-4">
             <CardTitle>Recent Tickets</CardTitle>
             <CardDescription>The most recent tickets assigned to you</CardDescription>
           </CardHeader>

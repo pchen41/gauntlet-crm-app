@@ -40,13 +40,17 @@ export default function LandingPage() {
             <Link href="/customer/login">
               <Button size="lg">
                 I&apos;m a customer
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <Link href="/agent/login">
-              <Button size="lg" variant="outline">
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="dark:hover:bg-background/50"
+              >
                 I&apos;m an agent
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>

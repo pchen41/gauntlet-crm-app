@@ -31,7 +31,7 @@ const DEFAULT_FIELDS = [
     name: "Assigned To",
     type: "agent",
     description: "Agent responsible for this ticket",
-    required: true,
+    required: false,
     rank: 0,
     isDefault: true,
     visibleToCustomer: false,

@@ -276,13 +276,13 @@ export function TicketHistory({ ticketId, updates }: TicketHistoryProps) {
                 </div>
                 {updates.some(update => update.internal) && <Separator />}
               </div>
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {updates
                   .filter(update => update.internal)
                   .filter(update => !hideFieldUpdates || update.comment)
                   .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                   .map(update => (
-                    <div key={update.id} className="space-y-1">
+                    <div key={update.id} className="space-y-1 pb-2">
                       <div className="text-sm text-muted-foreground">
                         {update.created_by.name} ({update.created_by.email}) {formatDate(new Date(update.created_at))}
                       </div>

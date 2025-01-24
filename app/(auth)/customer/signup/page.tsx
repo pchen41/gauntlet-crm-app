@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { LoaderCircle } from "lucide-react"
@@ -10,11 +10,28 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AuthFormWrapper } from "@/components/auth/auth-form-wrapper"
 import { toast } from "sonner"
+import LoadingScreen from "@/components/loading/loading-screen"
 
 export default function CustomerSignUp() {
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        router.replace('/customer')
+      } else {
+        setIsLoading(false)
+      }
+    }
+    checkUser()
+  }, [router, supabase.auth])
+
+  if (isLoading) {
+    return <div className="h-screen w-full"><LoadingScreen /></div>
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -36,9 +53,8 @@ export default function CustomerSignUp() {
       }
     })
 
-    setIsLoading(false)
-
     if (error) {
+      setIsLoading(false)
       return toast.error(error.message)
     }
 

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState, use } from "react"
 import { TemplateForm } from "@/components/agent/templates/template-form"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, LoaderCircle } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
 
@@ -140,7 +140,7 @@ export default function UpdateTemplatePage({ params }: PageProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+        <LoaderCircle className="h-8 w-8 animate-spin" />
       </div>
     )
   }

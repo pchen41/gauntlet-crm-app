@@ -19,43 +19,32 @@ export function Header() {
 
         <nav className="flex items-center space-x-4 lg:space-x-6">
           <Link 
-            href="/agent" 
+            href="/customer" 
             className={cn(
               "text-sm hover:text-primary",
-              pathname === "/agent" || pathname === "/agent/" 
+              pathname === "/customer" || pathname === "/customer/" 
                 ? "text-primary" 
                 : "text-muted-foreground"
             )}
           >
-            Dashboard
+            Home
           </Link>
           <Link 
-            href="/agent/tickets" 
+            href="/customer/tickets" 
             className={cn(
               "text-sm hover:text-primary",
-              pathname.startsWith("/agent/tickets") 
+              pathname.startsWith("/customer/tickets") 
                 ? "text-primary" 
                 : "text-muted-foreground"
             )}
           >
-            Tickets
+            My Tickets
           </Link>
           <Link 
-            href="/agent/templates" 
+            href="/customer/articles" 
             className={cn(
               "text-sm hover:text-primary",
-              pathname.startsWith("/agent/templates") 
-                ? "text-primary" 
-                : "text-muted-foreground"
-            )}
-          >
-            Templates
-          </Link>
-          <Link 
-            href="/agent/articles" 
-            className={cn(
-              "text-sm hover:text-primary",
-              pathname.startsWith("/agent/articles") 
+              pathname.startsWith("/customer/articles") 
                 ? "text-primary" 
                 : "text-muted-foreground"
             )}

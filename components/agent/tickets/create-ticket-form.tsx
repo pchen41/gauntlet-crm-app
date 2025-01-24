@@ -110,7 +110,7 @@ export function CreateTicketForm({ templates, agents, createTicket }: CreateTick
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-4">
+        <div className="space-y-5">
           <FormField
             control={form.control}
             name="template_id"

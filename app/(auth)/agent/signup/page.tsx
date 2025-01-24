@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
@@ -10,11 +10,28 @@ import { Label } from "@/components/ui/label"
 import { AuthFormWrapper } from "@/components/auth/auth-form-wrapper"
 import { toast } from "sonner"
 import { LoaderCircle } from "lucide-react"
+import LoadingScreen from "@/components/loading/loading-screen"
 
 export default function AgentSignUp() {
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        router.replace('/agent')
+      } else {
+        setIsLoading(false)
+      }
+    }
+    checkUser()
+  }, [router, supabase.auth])
+
+  if (isLoading) {
+    return <div className="h-screen w-full"><LoadingScreen /></div>
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -36,13 +53,12 @@ export default function AgentSignUp() {
       }
     })
 
-    setIsLoading(false)
-
     if (error) {
+      setIsLoading(false)
       return toast.error(error.message)
     }
 
-    // toast.success("Check your email for the confirmation link")
+    toast.success("Check your email for the confirmation link")
     router.push("/agent/login")
   }
 

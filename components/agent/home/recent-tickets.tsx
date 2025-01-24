@@ -14,6 +14,15 @@ type RecentTicketsProps = {
 };
 
 export function RecentTickets({ tickets }: RecentTicketsProps) {
+  if (tickets.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center pb-2 text-center">
+        <p className="text-lg font-medium text-muted-foreground">No recent tickets</p>
+        <p className="text-sm text-muted-foreground">New tickets will appear here</p>
+      </div>
+    );
+  }
+
   return (
     <Table>
       <TableHeader>
