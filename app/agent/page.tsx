@@ -1,12 +1,8 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Inbox, Clock, CheckCircle2, Ticket } from "lucide-react"
-import { RecentTickets } from "../../components/agent/home/recent-tickets"
-import { getAgentMetrics } from "@/lib/actions/agent-metrics"
+import { Ticket } from "lucide-react"
+import { MetricsDashboard } from "@/components/agent/home/metrics-dashboard"
 
-export default async function AgentDashboard() {
-  const metrics = await getAgentMetrics();
-
+export default function AgentDashboard() {
   return (
     <div className="container mx-auto py-10 pt-8 space-y-6">
       <div className="flex items-start justify-between pb-2">
@@ -24,68 +20,7 @@ export default async function AgentDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Assigned Tickets</CardTitle>
-            <Inbox className="h-4 w-4 text-muted-foreground !mt-0" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.assignedTickets}</div>
-            <p className="text-xs text-muted-foreground">
-              In the last 7 days
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Resolved Tickets</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground !mt-0" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.resolvedTickets}</div>
-            <p className="text-xs text-muted-foreground">
-              In the last 7 days
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Response Time</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground !mt-0" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.avgResponseTime}</div>
-            <p className="text-xs text-muted-foreground">
-              Average time to first response
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Resolution Time</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground !mt-0" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.avgResolutionTime}</div>
-            <p className="text-xs text-muted-foreground">
-              Average time to resolution
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle>Recent Tickets</CardTitle>
-            <CardDescription>The most recent tickets assigned to you</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RecentTickets tickets={metrics.recentTickets} />
-          </CardContent>
-        </Card>
-      </div>
+      <MetricsDashboard />
     </div>
   )
 }

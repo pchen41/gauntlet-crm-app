@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Plus, Pencil } from "lucide-react"
+import { Plus, Pencil, LoaderCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -77,7 +77,9 @@ export default function TemplatesPage() {
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-8">
-                  Loading templates...
+                  <div className="flex justify-center w-full">
+                    <LoaderCircle className="h-8 w-8 animate-spin" />
+                  </div>
                 </TableCell>
               </TableRow>
             ) : templates.length === 0 ? (

@@ -40,6 +40,15 @@ export function TicketFields({ ticketId, fields, tags }: TicketFieldsProps) {
   const [agentDetails, setAgentDetails] = useState<Record<string, Agent>>({})
   const [tagValues, setTagValues] = useState<string[]>(tags)
 
+  // Add this useEffect to update state when props change
+  useEffect(() => {
+    if (!isEditing) {
+      setFieldValues(fields)
+      setOriginalValues(fields)
+      setTagValues(tags)
+    }
+  }, [fields, tags, isEditing])
+
   // Fetch agent details for all agent values
   useEffect(() => {
     const fetchAgentDetails = async () => {

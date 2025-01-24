@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
+import { createClient } from "@/utils/supabase/client";
 
 export type RecentTicket = {
   id: string;
@@ -19,6 +18,30 @@ export type AgentMetrics = {
   recentTickets: RecentTicket[];
 };
 
+type TicketField = {
+  name: string;
+  value: string;
+};
+
+type TicketUpdate = {
+  created_at: string;
+  updates: Array<{
+    field: string;
+    new_value: string;
+  }>;
+  internal: boolean;
+  created_by: string;
+  ticket_id?: string;
+};
+
+type TicketData = {
+  id: string;
+  title: string;
+  fields: TicketField[];
+  created_at: string;
+  ticket_updates: TicketUpdate[];
+};
+
 export async function getAgentMetrics(): Promise<AgentMetrics> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -29,125 +52,133 @@ export async function getAgentMetrics(): Promise<AgentMetrics> {
   const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
   
-  // Get assigned tickets in last week
-  const { count: assignedTickets } = await supabase
-    .from('tickets')
-    .select('*', { count: 'exact' })
-    .gte('created_at', oneWeekAgo.toISOString())
-    .filter('fields', 'cs', `[{"name": "Assigned To", "value": "${user.id}"}]`)
-
-  // Get assigned tickets in previous week for trend
-  const { count: previousAssigned } = await supabase
-    .from('tickets')
-    .select('*', { count: 'exact' })
-    .gte('created_at', twoWeeksAgo.toISOString())
-    .lt('created_at', oneWeekAgo.toISOString())
-    .filter('fields', 'cs', `[{"name": "Assigned To", "value": "${user.id}"}]`)
-
-  // Get new tickets created in last week
-  const { count: newTickets } = await supabase
-    .from('tickets')
-    .select('*', { count: 'exact' })
-    .gte('created_at', oneWeekAgo.toISOString());
-
-  // Get resolved tickets in last week
-  const { data: resolvedTicketsData } = await supabase
-    .from('ticket_updates')
-    .select(`
-      ticket_id,
-      created_by
-    `)
-    .filter('updates', 'cs', `[{"field": "Status", "new_value": "Resolved"}]`)
-    .eq('created_by', user.id)
-    .gte('created_at', oneWeekAgo.toISOString())
-
-  // Count unique ticket IDs
-  const resolvedTickets = new Set(resolvedTicketsData?.map(update => update.ticket_id)).size;
-
-  // Get average resolution time
-  const { data: resolutionTimes } = await supabase
-    .from('tickets')
-    .select(`
-      created_at,
-      ticket_updates!inner (
-        created_at,
-        updates
-      )
-    `)
-    .filter('fields', 'cs', `[{"name": "Assigned To", "value": "${user.id}"}]`)
-    .filter('ticket_updates.updates', 'cs', `[{"field": "Status", "new_value": "Resolved"}]`)
-    .gte('created_at', oneWeekAgo.toISOString());
-
-  // Get average first response time
-  const { data: responseTimes } = await supabase
-    .from('tickets')
-    .select(`
-      created_at,
-      ticket_updates!inner (
-        created_at,
-        internal
-      )
-    `)
-    .filter('fields', 'cs', `[{"name": "Assigned To", "value": "${user.id}"}]`)
-    .eq('ticket_updates.internal', false)
-    .gte('created_at', oneWeekAgo.toISOString());
-  
-  // Calculate average resolution time
-  let totalResolutionTime = 0;
-  resolutionTimes?.forEach(ticket => {
-    const createdAt = new Date(ticket.created_at);
-    const resolvedAt = new Date(ticket.ticket_updates[0].created_at);
-    totalResolutionTime += resolvedAt.getTime() - createdAt.getTime();
-  });
-  const avgResolutionHours = resolutionTimes?.length 
-    ? (totalResolutionTime / resolutionTimes.length) / (1000 * 60 * 60)
-    : 0;
-
-  // Calculate average response time
-  let totalResponseTime = 0;
-  responseTimes?.forEach(ticket => {
-    const createdAt = new Date(ticket.created_at);
-    const firstResponseAt = new Date(ticket.ticket_updates[0].created_at);
-    totalResponseTime += firstResponseAt.getTime() - createdAt.getTime();
-  });
-  const avgResponseHours = responseTimes?.length 
-    ? (totalResponseTime / responseTimes.length) / (1000 * 60 * 60)
-    : 0;
-
-  // Calculate trends (percentage change)
-  const assignedTrend = previousAssigned ? ((assignedTickets || 0 - previousAssigned) / previousAssigned) * 100 : 0;
-
-  // Get recent tickets
-  const { data: recentTickets } = await supabase
+  const { data: ticketsData } = await supabase
     .from('tickets')
     .select(`
       id,
       title,
       fields,
-      created_at
+      created_at,
+      ticket_updates (
+        created_at,
+        updates,
+        internal,
+        created_by
+      )
     `)
-    .filter('fields', 'cs', `[{"name": "Assigned To", "value": "${user.id}"}]`)
-    .order('created_at', { ascending: false })
-    .limit(5);
+    .gte('created_at', twoWeeksAgo.toISOString())
+    .returns<TicketData[]>();
 
-  const formattedRecentTickets: RecentTicket[] = recentTickets?.map(ticket => {
-    const fields = ticket.fields as Array<{ name: string; value: string }>;
+  if (!ticketsData) {
     return {
+      assignedTickets: 0,
+      newTickets: 0,
+      resolvedTickets: 0,
+      avgResolutionTime: '0h',
+      avgResponseTime: '0h',
+      assignedTrend: 0,
+      recentTickets: [],
+    };
+  }
+
+  // Process the consolidated data
+  const currentWeekTickets = ticketsData.filter(t => 
+    new Date(t.created_at) >= oneWeekAgo
+  );
+  const previousWeekTickets = ticketsData.filter(t => 
+    new Date(t.created_at) >= twoWeeksAgo && new Date(t.created_at) < oneWeekAgo
+  );
+
+  // Filter assigned tickets
+  const isAssignedToUser = (fields: TicketField[]) => 
+    fields.some(f => f.name === 'Assigned To' && f.value === user.id);
+
+  const assignedTickets = currentWeekTickets.filter(t => 
+    isAssignedToUser(t.fields)
+  ).length;
+
+  const previousAssigned = previousWeekTickets.filter(t => 
+    isAssignedToUser(t.fields)
+  ).length;
+
+  // Calculate resolved tickets
+  const resolvedTickets = new Set(
+    ticketsData
+      .filter(t => new Date(t.created_at) >= oneWeekAgo)
+      .flatMap(t => t.ticket_updates || [])
+      .filter(update => 
+        update.created_by === user.id &&
+        update.updates?.some?.(u => u.field === 'Status' && u.new_value === 'Resolved')
+      )
+      .map(update => update.ticket_id)
+  ).size;
+
+  // Calculate average times for assigned tickets
+  const assignedTicketsData = ticketsData.filter(t => 
+    new Date(t.created_at) >= oneWeekAgo && isAssignedToUser(t.fields)
+  );
+
+  let totalResolutionTime = 0;
+  let resolutionCount = 0;
+  let totalResponseTime = 0;
+  let responseCount = 0;
+
+  assignedTicketsData.forEach(ticket => {
+    const createdAt = new Date(ticket.created_at).getTime();
+    const updates = ticket.ticket_updates || [];
+    
+    // Resolution time
+    const resolveUpdate = updates.find(u => 
+      u.updates?.some?.(upd => upd.field === 'Status' && upd.new_value === 'Resolved')
+    );
+    if (resolveUpdate) {
+      totalResolutionTime += new Date(resolveUpdate.created_at).getTime() - createdAt;
+      resolutionCount++;
+    }
+
+    // Response time
+    const firstResponse = updates
+      .filter(u => !u.internal)
+      .sort((a, b) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      )[0];
+    if (firstResponse) {
+      totalResponseTime += new Date(firstResponse.created_at).getTime() - createdAt;
+      responseCount++;
+    }
+  });
+
+  const avgResolutionHours = resolutionCount 
+    ? (totalResolutionTime / resolutionCount) / (1000 * 60 * 60)
+    : 0;
+  const avgResponseHours = responseCount 
+    ? (totalResponseTime / responseCount) / (1000 * 60 * 60)
+    : 0;
+
+  // Calculate trends
+  const assignedTrend = previousAssigned 
+    ? ((assignedTickets - previousAssigned) / previousAssigned) * 100 
+    : 0;
+
+  // Format recent tickets
+  const recentTickets: RecentTicket[] = assignedTicketsData
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 5)
+    .map(ticket => ({
       id: ticket.id,
       title: ticket.title,
-      status: fields.find(f => f.name === 'Status')?.value || 'New',
-      priority: fields.find(f => f.name === 'Priority')?.value || 'Medium',
+      status: ticket.fields.find(f => f.name === 'Status')?.value || 'New',
+      priority: ticket.fields.find(f => f.name === 'Priority')?.value || 'Medium',
       created_at: ticket.created_at,
-    };
-  }) || [];
+    }));
 
   return {
-    assignedTickets: assignedTickets || 0,
-    newTickets: newTickets || 0,
+    assignedTickets,
+    newTickets: currentWeekTickets.length,
     resolvedTickets,
     avgResolutionTime: `${avgResolutionHours.toFixed(1)}h`,
     avgResponseTime: `${avgResponseHours.toFixed(1)}h`,
     assignedTrend,
-    recentTickets: formattedRecentTickets,
+    recentTickets,
   };
 } 
