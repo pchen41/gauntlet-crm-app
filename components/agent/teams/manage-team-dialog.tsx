@@ -99,7 +99,7 @@ export function ManageTeamDialog({ team }: ManageTeamDialogProps) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon">
+          <Button variant="link" className="h-2">
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>

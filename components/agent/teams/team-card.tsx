@@ -20,9 +20,10 @@ interface TeamCardProps {
     description: string
     team_members: { agent_id: string }[]
   }
+  isAdmin: boolean
 }
 
-export function TeamCard({ team }: TeamCardProps) {
+export function TeamCard({ team, isAdmin }: TeamCardProps) {
   const [showMembers, setShowMembers] = useState(false)
 
   return (
@@ -30,7 +31,7 @@ export function TeamCard({ team }: TeamCardProps) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>{team.name}</CardTitle>
-          <ManageTeamDialog team={team} />
+          {isAdmin && <ManageTeamDialog team={team} />}
         </div>
         <CardDescription>{team.description}</CardDescription>
       </CardHeader>
