@@ -5,9 +5,31 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { UserNav } from "@/components/user/user-nav"
+import { createClient } from "@/utils/supabase/client"
+import { useEffect, useState } from "react"
 
 export function Header() {
   const pathname = usePathname()
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    async function checkRole() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('roles')
+          .eq('id', user.id)
+          .single()
+        
+        if (data?.roles?.includes('admin')) {
+          setIsAdmin(true)
+        }
+      }
+    }
+    checkRole()
+  }, [])
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 border-b bg-background">
@@ -62,6 +84,19 @@ export function Header() {
           >
             Articles
           </Link>
+          {isAdmin && (
+            <Link 
+              href="/agent/teams" 
+              className={cn(
+                "text-sm hover:text-primary",
+                pathname.startsWith("/agent/teams") 
+                  ? "text-primary" 
+                  : "text-muted-foreground"
+              )}
+            >
+              Teams
+            </Link>
+          )}
         </nav>
 
         <div className="ml-auto flex items-center">
