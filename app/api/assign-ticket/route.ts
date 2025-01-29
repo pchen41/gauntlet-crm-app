@@ -4,11 +4,13 @@ import { OpenAIEmbeddings, ChatOpenAI } from "@langchain/openai";
 import { createClient } from '@supabase/supabase-js'
 import { z } from "zod";
 export const dynamic = 'force-dynamic'; // static by default, unless reading the request
+export const maxDuration = 60;
 
 // test locally with 'curl -i -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer YOUR_TOKEN' -d '{"ticketId": "ticket_id"}' localhost:3000/api/assign-ticket'
 export async function POST(request: Request) {
   try {
-    const {ticketId} = await request.json();
+    const payload = await request.json();
+    const ticketId = payload.record.id
     const authHeader = request.headers.get('Authorization')!
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
