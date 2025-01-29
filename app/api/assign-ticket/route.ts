@@ -6,7 +6,7 @@ import { z } from "zod";
 export const dynamic = 'force-dynamic'; // static by default, unless reading the request
 export const maxDuration = 60;
 
-// test locally with 'curl -i -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer YOUR_TOKEN' -d '{"ticketId": "ticket_id"}' localhost:3000/api/assign-ticket'
+// test locally with 'curl -i -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer YOUR_TOKEN' -d '{"record":{"id": "ticket_id"}}' localhost:3000/api/assign-ticket'
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
@@ -108,23 +108,6 @@ export async function POST(request: Request) {
       }
     );
 
-    const multiply = tool(
-      ({ a, b }: { a: number; b: number }): number => {
-        /**
-         * Multiply a and b.
-         */
-        return a * b;
-      },
-      {
-        name: "multiply",
-        description: "Multiply two numbers",
-        schema: z.object({
-          a: z.number(),
-          b: z.number(),
-        }),
-      }
-    );
-
     const llm = new ChatOpenAI({
       apiKey:  process.env.OPENAI_API_KEY,
       model: "gpt-4o",
@@ -140,8 +123,8 @@ export async function POST(request: Request) {
       });
 
     const text = `${title} - ${description}`
-    const teams = await vectorStore.similaritySearch(text, 1)
-    const teamId = teams[0].metadata.groupId
+    const teams = await vectorStore.similaritySearch(text, 8)
+    const teamsContent = teams.map((team) => `${team.pageContent} (id: ${team.metadata.groupId})`).join("\n");
 
     const modelWithTools = llm.bindTools([updateTicket])
     const response = await modelWithTools.invoke(`
@@ -150,14 +133,17 @@ export async function POST(request: Request) {
       Title: ${title}
       Description: ${description}
 
-      Based on the ticket content, please come up with a priority between 0 and 3, inclusive (lower is higher priority) and then assign the ticket to team id ${teamId}.
+      Here are potential teams that can handle the ticket:
+      ${teamsContent}
+
+      Based on the ticket content, please come up with a priority between 0 and 3, inclusive (lower is higher priority) and select the most relevant team to handle it.
+      Update the ticket with this information.
       Keep your response concise and to the point.
     `)
     
-    if(response.tool_calls) {
+    if(response.tool_calls && response.tool_calls.length > 0) {
       const toolCall = response.tool_calls[0] as any
       const toolOutput = await updateTicket.invoke(toolCall.args);
-      console.log(toolOutput)
     }
   } catch (error: any) {
     console.error("Error:", error);
