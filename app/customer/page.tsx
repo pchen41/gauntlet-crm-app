@@ -86,24 +86,37 @@ export default async function CustomerPage() {
         </div>
 
         {tickets && tickets.length > 0 ? (
-          <div className="grid gap-4">
-            {tickets.map((ticket) => (
-              <Card key={ticket.id}>
-                <CardHeader>
-                  <CardTitle className="text-lg">{ticket.title}</CardTitle>
-                  <CardDescription>
-                    Status: {ticket.fields.find((f: { name: string, value: string }) => f.name === 'Status')?.value || 'Unknown'}
-                    {' • '}
-                    Created: {new Date(ticket.created_at).toLocaleDateString()}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button asChild variant="link" className="px-0">
-                    <Link href={`/customer/tickets/${ticket.id}`}>View Details →</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="rounded-lg border">
+            <div className="divide-y">
+              {tickets.map((ticket) => (
+                <div
+                  key={ticket.id}
+                  className="flex items-center justify-between p-4 hover:bg-muted/50"
+                >
+                  <div className="flex flex-col gap-1">
+                    <Link
+                      href={`/customer/tickets/${ticket.id}`}
+                      className="font-medium hover:underline"
+                    >
+                      {ticket.title}
+                    </Link>
+                    <div className="text-sm text-muted-foreground">
+                      Created {new Date(ticket.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-sm font-medium ring-1 ring-inset ring-muted-foreground/20">
+                      {ticket.fields.find((f: { name: string, value: string }) => f.name === 'Status')?.value || 'Unknown'}
+                    </span>
+                    <Button variant="ghost" size="default" asChild>
+                      <Link href={`/customer/tickets/${ticket.id}`}>
+                        View →
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <Card>

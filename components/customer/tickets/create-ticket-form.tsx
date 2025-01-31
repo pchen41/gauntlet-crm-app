@@ -59,6 +59,7 @@ interface CreateTicketFormProps {
 
 export function CreateTicketForm({ templates, createTicket }: CreateTicketFormProps) {
   const router = useRouter()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -97,15 +98,26 @@ export function CreateTicketForm({ templates, createTicket }: CreateTicketFormPr
     .filter(field => field.required)
     .some(field => !customFields[`field_${field.id}`]?.trim())
 
-  // Disable button if required fields are empty
+  // Disable button if required fields are empty or form is submitting
   const isSubmitDisabled = !selectedTemplateId || 
     !title?.trim() || 
     !description?.trim() || 
-    hasEmptyRequiredFields
+    hasEmptyRequiredFields ||
+    isSubmitting
 
   return (
     <Form {...form}>
-      <form action={createTicket} className="space-y-5">
+      <form 
+        action={async (formData) => {
+          try {
+            setIsSubmitting(true)
+            await createTicket(formData)
+          } finally {
+            setIsSubmitting(false)
+          }
+        }} 
+        className="space-y-5"
+      >
         <FormField
           control={form.control}
           name="template_id"
@@ -221,7 +233,7 @@ export function CreateTicketForm({ templates, createTicket }: CreateTicketFormPr
           className="!mt-6"
           disabled={isSubmitDisabled}
         >
-          Create Ticket
+          {isSubmitting ? "Creating..." : "Create Ticket"}
         </Button>
       </form>
     </Form>

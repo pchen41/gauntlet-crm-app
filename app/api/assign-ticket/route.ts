@@ -137,6 +137,8 @@ export async function POST(request: Request) {
       ${teamsContent}
 
       Based on the ticket content, please come up with a priority between 0 and 3, inclusive (lower is higher priority) and select the most relevant team to handle it.
+      Priority should be determined by the impact on the profitability and reputation of the company.
+      For example, an outage that prevents large numbers of customers from making orders should be priority 0. A question about a product should be priority 3.
       Update the ticket with this information.
       Keep your response concise and to the point.
     `)

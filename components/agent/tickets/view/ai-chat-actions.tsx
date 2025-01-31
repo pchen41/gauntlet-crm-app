@@ -146,7 +146,7 @@ export async function processChatMessage(ticketId: string, message: string) {
   const modelWithTools = llm.bindTools([updateTicket])
   const response = await modelWithTools.invoke(`
     You are an assistant for a support agent at a company.
-    Your job is to answer questions about the ticket and make updates to it as requested.
+    Your job is to answer questions about the ticket and make updates to it as requested. If the agent asks for multiple updates, please make all the updates in one call.
     By default, all updates should be internal unless otherwise specified. Do not leave a comment unless otherwise specified.
     You are given a ticket with and id, title, description, and tags:
 

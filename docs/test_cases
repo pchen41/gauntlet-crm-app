@@ -1,0 +1,101 @@
+Test cases
+
+TriageBot (automatically assigns and prioritizes tickets) test cases:
+
+Ticket 1:
+- "Forgot password"
+- Should assign to account support team
+- Should be low priority
+
+Ticket 2:
+- "Forgot password. This is urgent!"
+- Should assign to account support team
+- Should be high priority
+
+Ticket 3:
+- "How to cancel order"
+- Should assign to order questions team
+- Should be medium priority
+
+Ticket 4:
+- "Order contains wrong items"
+- Should assign to order questions team
+- Should be medium priority
+
+Ticket 5:
+- "Website down"
+- Should assign to tech support team
+- Should be high priority
+
+Ticket 6:
+- "When was the company founded?"
+- Should assign to other issues team
+- Should be low priority
+
+Results (evaluated on langsmith):
+Correct action: 5/5
+Accuracy: 4/5 (assigns to correct team but tends to get priority wrong)
+
+Ticket Agent (updates tickets based on user requests) test cases:
+
+(All test cases should happen sequentually and use the same ticket)
+Test 1:
+- "Assign to bob"
+- Should assign ticket to bob
+
+Test 2:
+- "Update priority to 0"
+- Should update priority to 0
+
+Test 3:
+- "Update status to new"
+- Should update status to new
+
+Test 4:
+- "Add tag 'test'"
+- Should add tag 'test'
+
+Test 5:
+- "Add tag 'test2'"
+- Should keep existing tags add tag 'test2'
+
+Test 6:
+- "Remove tag 'test'"
+- Should remove tag 'test' and keep other tags
+
+Test 7:
+- "Assign to peter and update status to in progress"
+- Should assign to peter and update status to in progress
+
+Test 8:
+- "Summarize the ticket"
+- No updates, should return a summary of the ticket
+
+Test 9:
+- "Close the ticket if the issue is fixed"
+- No updates
+
+Test 10:
+- "Add a public comment 'issue is fixed'"
+- Should add a public comment 'issue is fixed'
+
+Test 11:
+- "Add a private comment 'was caused by a database issue'"
+- Should add a private comment 'was caused by a database issue'
+
+Test 12:
+- "Summarize ticket"
+- No updates, should return a summary of the ticket including the latest comments
+
+Test 13:
+- "Close the ticket if the issue is fixed"
+- Should update the status to resolved
+
+Test 14:
+- "Test"
+- Should do nothing and ask for further details
+
+Results (rounded down):
+Action: 4/5
+Accuracy 4/5
+Note: seems to have issue with conditional logic (e.g. close ticket if issue is fixed)
