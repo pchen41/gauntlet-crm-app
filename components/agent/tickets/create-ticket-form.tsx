@@ -64,6 +64,7 @@ const formSchema = z.object({
 export function CreateTicketForm({ templates, agents, createTicket }: CreateTicketFormProps) {
   const router = useRouter()
   const [selectedTemplate, setSelectedTemplate] = useState<string>('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -80,6 +81,7 @@ export function CreateTicketForm({ templates, agents, createTicket }: CreateTick
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
+      setIsSubmitting(true)
       const formData = new FormData()
       // Add form fields to FormData
       Object.entries(data).forEach(([key, value]) => {
@@ -104,6 +106,7 @@ export function CreateTicketForm({ templates, agents, createTicket }: CreateTick
     } catch (error) {
       toast.error('Failed to create ticket')
       console.error(error)
+      setIsSubmitting(false)
     }
   }
 
@@ -220,10 +223,13 @@ export function CreateTicketForm({ templates, agents, createTicket }: CreateTick
             type="button"
             variant="outline"
             onClick={() => router.back()}
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
-          <Button type="submit">Create Ticket</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create Ticket"}
+          </Button>
         </div>
       </form>
     </Form>

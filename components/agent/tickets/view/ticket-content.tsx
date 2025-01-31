@@ -2,11 +2,10 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { TicketFields } from '@/components/agent/tickets/view/ticket-fields'
 import { TicketHistory } from '@/components/agent/tickets/view/ticket-history'
-import { useState } from 'react'
+import { ArrowLeft } from 'lucide-react'
 
 interface TicketContentProps {
   ticket: any

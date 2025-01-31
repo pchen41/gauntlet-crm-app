@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,8 @@ import DOMPurify from 'isomorphic-dompurify'
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns'
+import { Sparkles } from "lucide-react"
+import { AIChatModal } from "./ai-chat-modal"
 
 interface TicketUpdate {
   id: string
@@ -73,6 +75,7 @@ export function TicketHistory({ ticketId, updates }: TicketHistoryProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [agentDetails, setAgentDetails] = useState<Record<string, Agent>>({})
   const [hideFieldUpdates, setHideFieldUpdates] = useState(false)
+  const [aiChatOpen, setAiChatOpen] = useState(false)
 
   // Fetch agent details for all agent IDs in updates
   useEffect(() => {
@@ -203,7 +206,19 @@ export function TicketHistory({ ticketId, updates }: TicketHistoryProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="relative">
+        <CardTitle>Ticket History</CardTitle>
+        <div className="absolute right-4 top-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setAiChatOpen(true)}
+          >
+            <Sparkles className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
         <Tabs defaultValue="public">
           <TabsList>
             <TabsTrigger value="public">Public</TabsTrigger>
@@ -295,7 +310,13 @@ export function TicketHistory({ ticketId, updates }: TicketHistoryProps) {
             </div>
           </TabsContent>
         </Tabs>
-      </CardHeader>
+      </CardContent>
+
+      <AIChatModal 
+        open={aiChatOpen} 
+        onOpenChange={setAiChatOpen}
+        ticketId={ticketId}
+      />
     </Card>
   )
 } 
