@@ -15,6 +15,17 @@ export async function processChatMessage(ticketId: string, message: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error("Not authenticated")
 
+  // Fetch all agents
+  const { data: agents, error: agentsError } = await supabase
+    .from('profiles')
+    .select('id, name, email')
+    .contains('roles', ['agent'])
+
+  if (agentsError) {
+    console.error('Error fetching agents:', agentsError)
+    throw new Error('Failed to fetch agents')
+  }
+
   const { data: ticket, error: ticketError } = await supabase
     .from('tickets')
     .select(`
@@ -22,6 +33,7 @@ export async function processChatMessage(ticketId: string, message: string) {
       title,
       description,
       fields,
+      tags,
       ticket_templates (
         id,
         name,
@@ -70,12 +82,13 @@ export async function processChatMessage(ticketId: string, message: string) {
   })
 
   const updateTicket = tool(
-    async ({ ticketId, fields, comment, internal }) => {
+    async ({ ticketId, fields, comment, internal, tags }) => {
       console.log("updateTicket")
       console.log(ticketId)
       console.log(fields)
       console.log(comment)
       console.log(internal)
+      console.log(tags)
 
       try {    
         // Format the updates for the RPC call
@@ -90,7 +103,8 @@ export async function processChatMessage(ticketId: string, message: string) {
           field_updates: fieldUpdates,
           updater_id: user.id,
           comment: comment || null,
-          internal: internal ?? true
+          internal: internal ?? true,
+          new_tags: tags
         })
     
         if (error) {
@@ -109,7 +123,7 @@ export async function processChatMessage(ticketId: string, message: string) {
     },
     {
       name: "updateTicket",
-      description: "Update ticket with the given fields.",
+      description: "Update ticket with the given fields and tags.",
       schema: z.object({
         ticketId: z.string(),
         fields: z.array(z.object({
@@ -117,7 +131,8 @@ export async function processChatMessage(ticketId: string, message: string) {
           newValue: z.string()
         })),
         comment: z.string().optional(),
-        internal: z.boolean()
+        internal: z.boolean(),
+        tags: z.array(z.string()).optional()
       }),
     }
   );
@@ -133,11 +148,12 @@ export async function processChatMessage(ticketId: string, message: string) {
     You are an assistant for a support agent at a company.
     Your job is to answer questions about the ticket and make updates to it as requested.
     By default, all updates should be internal unless otherwise specified. Do not leave a comment unless otherwise specified.
-    You are given a ticket with and id, title, description:
+    You are given a ticket with and id, title, description, and tags:
 
     Ticket id: ${ticket.id}
     Title: ${ticket.title}
     Description: ${ticket.description}
+    Tags: ${ticket.tags ? ticket.tags.join(', ') : ''}
 
     The ticket has the following fields:
     ${fieldsWithMetadata.map((field: any) => {
@@ -149,6 +165,10 @@ export async function processChatMessage(ticketId: string, message: string) {
       ].filter(Boolean).join('\n    ')
       return fieldInfo
     }).join('\n\n    ')}
+
+    Available agents:
+    ${agents.map(agent => `- ${agent.name || agent.email} (id: ${agent.id})`).join('\n    ')}
+    When updating a field with an agent type, use the agent's id.
 
     Ticket update history:
     ${ticket.ticket_updates
